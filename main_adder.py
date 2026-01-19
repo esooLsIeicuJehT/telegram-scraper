@@ -26,6 +26,34 @@ success = utils.success
 plus = utils.plus
 INPUT = utils.INPUT
 
+def verify_account(account):
+    """
+    Verifies a single account.
+    Returns: (account, status, details)
+    status: 'valid', 'needs_auth', 'error'
+    """
+    iD = int(account[0])
+    Hash = str(account[1])
+    phn = str(account[2])
+    client = TelegramClient(f'{config.SESSIONS_DIR}/{phn}', iD, Hash)
+
+    status = 'error'
+    details = None
+
+    try:
+        client.connect()
+        if client.is_user_authorized():
+            status = 'valid'
+        else:
+            status = 'needs_auth'
+    except Exception as e:
+        status = 'error'
+        details = str(e)
+    finally:
+        client.disconnect()
+
+    return account, status, details
+
 def main():
     """Main orchestrator function"""
     utils.clear_screen()
@@ -76,8 +104,24 @@ def main():
     # Verify accounts and remove banned ones
     banned = []
     valid_accounts = []
+    needs_auth_accounts = []
 
-    for a in accounts:
+    # Parallel verification
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        futures = {executor.submit(verify_account, a): a for a in accounts}
+        for future in concurrent.futures.as_completed(futures):
+            acc, status, details = future.result()
+            phn = str(acc[2])
+
+            if status == 'valid':
+                valid_accounts.append(acc)
+            elif status == 'needs_auth':
+                needs_auth_accounts.append(acc)
+            elif status == 'error':
+                print(f'{error} Error connecting {phn}: {details}')
+
+    # Process accounts needing authorization serially
+    for a in needs_auth_accounts:
         iD = int(a[0])
         Hash = str(a[1])
         phn = str(a[2])
@@ -85,13 +129,12 @@ def main():
         
         try:
             clnt.connect()
-
+            # Double check authorization status
             if not clnt.is_user_authorized():
                 try:
                     clnt.send_code_request(phn)
                     code = input(f'{INPUT}{LG} Enter code for {W}{phn}{CY}[s to skip]:{R}')
                     if 's' in code.lower():
-                        # Skip this account - it won't be in valid_accounts
                         pass
                     else:
                         clnt.sign_in(phn, code)
@@ -102,8 +145,8 @@ def main():
                 except Exception as e:
                     print(f'{error}{R} Error with {phn}: {e}{utils.RS}')
             else:
+                # Became authorized somehow or race condition resolved
                 valid_accounts.append(a)
-
             clnt.disconnect()
         except Exception as e:
              print(f'{error} Error connecting {phn}: {e}')
