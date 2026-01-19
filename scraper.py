@@ -115,10 +115,10 @@ def scrape_members():
     print(f"{R}[{CY}2{R}]{LG} Users active in the last week")
     print(f"{R}[{CY}3{R}]{LG} Users active in the last month")
     print(f"{R}[{CY}4{R}]{LG} Non-active users (not active in the last month)")
-    
+
     try:
         choice = int(input(f"\nYour choice: "))
-        if choice < 0 or choice > 4:
+        if choice not in range(5):
             print(f'{error} Invalid choice!')
             c.disconnect()
             sys.exit(1)
