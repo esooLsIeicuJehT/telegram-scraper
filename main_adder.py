@@ -7,9 +7,11 @@ import time
 import os
 import sys
 import random
+import asyncio
 import config
 import utils
 from telethon.sync import TelegramClient
+from telethon import TelegramClient as AsyncTelegramClient
 from telethon.tl.functions.channels import JoinChannelRequest
 from telethon.errors.rpcerrorlist import PhoneNumberBannedError
 
@@ -131,20 +133,29 @@ def main():
     
     # Join target group from all accounts
     print(f'\n{info}{LG} Joining from all accounts...{utils.RS}')
-    for account in accounts:
+
+    async def join_channel(account, group):
         api_id = int(account[0])
         api_hash = str(account[1])
         phone = str(account[2])
-        client = TelegramClient(f'{config.SESSIONS_DIR}/{phone}', api_id, api_hash)
+        client = AsyncTelegramClient(f'{config.SESSIONS_DIR}/{phone}', api_id, api_hash)
         try:
-            client.connect()
-            username = client.get_entity(group)
-            client(JoinChannelRequest(username))
+            await client.connect()
+            username = await client.get_entity(group)
+            await client(JoinChannelRequest(username))
             print(f'{success}{LG} Joined from {phone}')
         except Exception as e:
             print(f'{error}{R} Error in joining from {phone}: {e}')
         finally:
-            client.disconnect()
+            await client.disconnect()
+
+    async def join_all_accounts(accounts, group):
+        tasks = []
+        for account in accounts:
+            tasks.append(join_channel(account, group))
+        await asyncio.gather(*tasks)
+
+    asyncio.run(join_all_accounts(accounts, group))
     
     time.sleep(1)
     utils.clear_screen()
