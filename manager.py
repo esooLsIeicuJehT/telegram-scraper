@@ -180,6 +180,13 @@ def delete_account():
 
 def main():
     """Main menu loop"""
+    menu_options = {
+        1: add_accounts,
+        2: filter_banned_accounts,
+        3: list_accounts,
+        4: delete_account,
+    }
+
     while True:
         utils.clear_screen()
         utils.banner()
@@ -188,29 +195,25 @@ def main():
         print(f'{LG}[3] List out all the accounts{utils.RS}')
         print(f'{LG}[4] Delete specific accounts{utils.RS}')
         print(f'{LG}[5] Quit{utils.RS}')
-        
-        try:
-            choice = input(f'\nEnter your choice: {R}')
-            if not choice.isdigit():
-                 print(f'{error} Invalid choice! Please try again.')
-                 time.sleep(2)
-                 continue
 
-            a = int(choice)
-            
-            if a == 1:
-                add_accounts()
-            elif a == 2:
-                filter_banned_accounts()
-            elif a == 3:
-                list_accounts()
-            elif a == 4:
-                delete_account()
-            elif a == 5:
+        try:
+            choice_str = input(f'\nEnter your choice: {R}')
+            if not choice_str.isdigit():
+                print(f'{error} Invalid choice! Please try again.')
+                time.sleep(2)
+                continue
+
+            choice = int(choice_str)
+
+            if choice == 5:
                 utils.clear_screen()
                 utils.banner()
                 print(f'{LG}Goodbye!{utils.RS}')
                 break
+
+            action = menu_options.get(choice)
+            if action:
+                action()
             else:
                 print(f'{error} Invalid choice! Please try again.')
                 time.sleep(2)
