@@ -4,7 +4,9 @@ Account Manager - Add, filter, and manage Telegram accounts
 
 import os
 import time
+import asyncio
 from telethon.sync import TelegramClient
+from telethon import TelegramClient as AsyncTelegramClient
 from telethon.errors.rpcerrorlist import PhoneNumberBannedError
 import config
 import utils
@@ -73,6 +75,36 @@ def add_accounts():
             print(f'{error} Invalid input! Please enter a valid number for API ID.')
             continue
 
+async def check_account_status(account):
+    """Check single account status asynchronously"""
+    api_id = int(account[0])
+    api_hash = str(account[1])
+    phone = str(account[2])
+    session_path = f'{config.SESSIONS_DIR}/{phone}'
+
+    client = AsyncTelegramClient(session_path, api_id, api_hash)
+
+    status = "ERROR"
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            status = "UNAUTHORIZED"
+        else:
+            status = "ACTIVE"
+    except PhoneNumberBannedError:
+        status = "BANNED"
+    except Exception as e:
+        status = f"ERROR:{str(e)}"
+    finally:
+        await client.disconnect()
+
+    return account, status
+
+async def check_all_accounts_parallel(accounts):
+    """Check all accounts in parallel"""
+    tasks = [check_account_status(acc) for acc in accounts]
+    return await asyncio.gather(*tasks)
+
 def filter_banned_accounts():
     """Filter and remove banned accounts"""
     accounts = utils.load_accounts()
@@ -83,11 +115,38 @@ def filter_banned_accounts():
         time.sleep(3)
         return
     
-    for account in accounts:
+    print(f'{info} Checking accounts status...')
+
+    # Run async checks
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        results = loop.run_until_complete(check_all_accounts_parallel(accounts))
+    finally:
+        loop.close()
+
+    unauthorized_accs = []
+
+    for account, status in results:
+        phone = account[2]
+        if status == "ACTIVE":
+             print(f'{success} {phone} is active')
+        elif status == "BANNED":
+             print(f'{error} {phone} is banned!')
+             banned_accs.append(account)
+        elif status == "UNAUTHORIZED":
+             unauthorized_accs.append(account)
+        else:
+             print(f'{error} Error checking {phone}: {status}')
+
+    # Handle unauthorized accounts sequentially (interactive)
+    for account in unauthorized_accs:
         api_id = int(account[0])
         api_hash = str(account[1])
         phone = str(account[2])
         session_path = f'{config.SESSIONS_DIR}/{phone}'
+
+        # Use sync client for interaction
         client = TelegramClient(session_path, api_id, api_hash)
         try:
             client.connect()
