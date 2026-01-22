@@ -156,6 +156,7 @@ def scrape_members():
     
     # Date calculations
     today = datetime.datetime.now()
+    today_date = today.date()
     yesterday = today - datetime.timedelta(days=1)
 
     with open(f"{config.MEMBERS_DIR}/members.csv", "w", encoding='UTF-8') as f:
@@ -196,7 +197,7 @@ def scrape_members():
                     elif isinstance(member.status, UserStatusOffline):
                          d = getattr(member.status, 'was_online', None)
                          if d:
-                             if (today.date() - d.date()).days <= 7:
+                             if (today_date - d.date()).days <= 7:
                                  should_write = True
 
                 elif choice == 3: # Last month
@@ -204,7 +205,7 @@ def scrape_members():
                          should_write = True
                     elif isinstance(member.status, UserStatusOffline):
                          d = getattr(member.status, 'was_online', None)
-                         if d and (today.date() - d.date()).days <= 30:
+                         if d and (today_date - d.date()).days <= 30:
                              should_write = True
 
                 elif choice == 4: # Non-active
@@ -213,7 +214,7 @@ def scrape_members():
                          is_active = True
                      elif isinstance(member.status, UserStatusOffline):
                          d = getattr(member.status, 'was_online', None)
-                         if d and (today.date() - d.date()).days <= 30:
+                         if d and (today_date - d.date()).days <= 30:
                              is_active = True
 
                      if not is_active:
