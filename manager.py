@@ -82,7 +82,6 @@ def add_accounts():
                 print(f'\n{info} Saved all accounts')
                 time.sleep(1)
                 utils.clear_screen()
-                print(f'{info} Logging in from new accounts...\n')
 
                 os.makedirs(config.SESSIONS_DIR, exist_ok=True)
 
@@ -90,7 +89,8 @@ def add_accounts():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    results = loop.run_until_complete(check_all_accounts_parallel(newly_added))
+                    with utils.Spinner("Logging in from new accounts..."):
+                        results = loop.run_until_complete(check_all_accounts_parallel(newly_added))
                 finally:
                     loop.close()
 
@@ -141,13 +141,12 @@ def filter_banned_accounts():
         time.sleep(3)
         return
     
-    print(f'{info} Checking accounts status...')
-
     # Run async checks
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        results = loop.run_until_complete(check_all_accounts_parallel(accounts))
+        with utils.Spinner("Checking accounts status..."):
+            results = loop.run_until_complete(check_all_accounts_parallel(accounts))
     finally:
         loop.close()
 
