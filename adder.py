@@ -3,7 +3,7 @@ Telegram Member Adder - Add members to Telegram groups using multiple accounts
 """
 
 from telethon.sync import TelegramClient
-from telethon.tl.types import InputPeerChannel
+from telethon.tl.types import InputPeerChannel, InputPeerUser
 from telethon.tl.functions.channels import InviteToChannelRequest
 from telethon.errors.rpcerrorlist import PeerFloodError, UserPrivacyRestrictedError
 import csv
@@ -142,7 +142,7 @@ def add_members():
                     continue
                 
                 # Get user entity
-                user_to_add = client.get_input_entity(user['username'])
+                user_to_add = InputPeerUser(int(user['user_id']), int(user['access_hash']))
                 
                 # Add to group
                 client(InviteToChannelRequest(entity, [user_to_add]))

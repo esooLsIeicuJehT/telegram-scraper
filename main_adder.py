@@ -9,6 +9,7 @@ import sys
 import random
 import asyncio
 import concurrent.futures
+import subprocess
 import config
 import utils
 from telethon.sync import TelegramClient
@@ -324,50 +325,28 @@ def main():
     o = str(len(to_use))
 
     print(f'\n{info}{R} This will be fully automated.')
-    print(f'{info}{R} Don\'t touch the keyboard until cmd window pop-up stops')
     input(f'\n{plus}{LG} Press enter to continue...{utils.RS}')
 
     print(f'\n{info}{LG} Launching from {o} accounts...{utils.RS}\n')
-
-    try:
-        import keyboard
-
-        for i in range(5, 0, -1):
-            print(random.choice(utils.colors) + str(i) + utils.RS)
-            time.sleep(1)
-
-        for i, account in enumerate(to_use):
-            api_id = str(account[0])
-            api_hash = str(account[1])
-            phone = str(account[2])
-            file = f'{config.MEMBERS_DIR}/members{i}.csv'
-            group_id = target_group_entity.id
-            group_hash = target_group_entity.access_hash
-            group_title = target_group_entity.title
-            
-            os.system('start cmd')
-            time.sleep(1.5)
-
-            # Write command
-            keyboard.write(f'python {program} {api_id} {api_hash} {phone} {file} {group_id} {group_hash} "{group_title}"')
-            keyboard.press_and_release('Enter')
-
-            print(f'{plus}{LG} Launched from {phone}')
-
-    except ImportError:
-        print(f'{error}{R} keyboard module not installed. Install it with: pip install keyboard{utils.RS}')
-        print(f'\n{info}{LG} Commands to run manually:{utils.RS}')
-        for i, account in enumerate(to_use):
-            api_id = str(account[0])
-            api_hash = str(account[1])
-            phone = str(account[2])
-            file = f'{config.MEMBERS_DIR}/members{i}.csv'
-            group_id = target_group_entity.id
-            group_hash = target_group_entity.access_hash
-            group_title = target_group_entity.title
-            print(f'  python adder.py {api_id} {api_hash} {phone} {file} {group_id} {group_hash} "{group_title}"')
+    
+    for i, account in enumerate(to_use):
+        api_id = str(account[0])
+        api_hash = str(account[1])
+        phone = str(account[2])
+        file = f'{config.MEMBERS_DIR}/members{i}.csv'
         
-        input(f'\n{plus}{LG} Press enter to exit...{utils.RS}')
+        # Prepare subprocess arguments
+        # subprocess.CREATE_NEW_CONSOLE is only available/needed on Windows to open new window
+        kwargs = {}
+        if os.name == 'nt':
+            kwargs['creationflags'] = getattr(subprocess, 'CREATE_NEW_CONSOLE', 16)
+        
+        subprocess.Popen(
+            [sys.executable, program, api_id, api_hash, phone, file, group],
+            **kwargs
+        )
+        
+        print(f'{plus}{LG} Launched from {phone}')
 
 
 if __name__ == '__main__':
