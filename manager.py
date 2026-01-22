@@ -20,6 +20,36 @@ info = utils.info
 error = utils.error
 success = utils.success
 
+async def check_account_status(account):
+    """Check single account status asynchronously"""
+    api_id = int(account[0])
+    api_hash = str(account[1])
+    phone = str(account[2])
+    session_path = f'{config.SESSIONS_DIR}/{phone}'
+
+    client = AsyncTelegramClient(session_path, api_id, api_hash)
+
+    status = "ERROR"
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            status = "UNAUTHORIZED"
+        else:
+            status = "ACTIVE"
+    except PhoneNumberBannedError:
+        status = "BANNED"
+    except Exception as e:
+        status = f"ERROR:{str(e)}"
+    finally:
+        await client.disconnect()
+
+    return account, status
+
+async def check_all_accounts_parallel(accounts):
+    """Check all accounts in parallel"""
+    tasks = [check_account_status(acc) for acc in accounts]
+    return await asyncio.gather(*tasks)
+
 def add_accounts():
     """Add new accounts"""
     accounts = utils.load_accounts()
@@ -54,8 +84,34 @@ def add_accounts():
                 utils.clear_screen()
                 print(f'{info} Logging in from new accounts...\n')
 
-                for added in newly_added:
-                    os.makedirs(config.SESSIONS_DIR, exist_ok=True)
+                os.makedirs(config.SESSIONS_DIR, exist_ok=True)
+
+                # Check status of all new accounts in parallel
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    results = loop.run_until_complete(check_all_accounts_parallel(newly_added))
+                finally:
+                    loop.close()
+
+                unauthorized_accs = []
+
+                for account, status in results:
+                    phone = account[2]
+                    if status == "ACTIVE":
+                        print(f'\n{success} Logged in - {phone}')
+                        print('\n')
+                    elif status == "BANNED":
+                        print(f'{error} {phone} is banned! Filter it using option 2')
+                        print('\n')
+                    elif status == "UNAUTHORIZED":
+                        unauthorized_accs.append(account)
+                    else:
+                        print(f'{error} Error logging in {phone}: {status}')
+                        print('\n')
+
+                # Process unauthorized accounts sequentially
+                for added in unauthorized_accs:
                     c = TelegramClient(f'{config.SESSIONS_DIR}/{added[2]}', added[0], added[1])
                     try:
                         c.start()
@@ -74,36 +130,6 @@ def add_accounts():
         except ValueError:
             print(f'{error} Invalid input! Please enter a valid number for API ID.')
             continue
-
-async def check_account_status(account):
-    """Check single account status asynchronously"""
-    api_id = int(account[0])
-    api_hash = str(account[1])
-    phone = str(account[2])
-    session_path = f'{config.SESSIONS_DIR}/{phone}'
-
-    client = AsyncTelegramClient(session_path, api_id, api_hash)
-
-    status = "ERROR"
-    try:
-        await client.connect()
-        if not await client.is_user_authorized():
-            status = "UNAUTHORIZED"
-        else:
-            status = "ACTIVE"
-    except PhoneNumberBannedError:
-        status = "BANNED"
-    except Exception as e:
-        status = f"ERROR:{str(e)}"
-    finally:
-        await client.disconnect()
-
-    return account, status
-
-async def check_all_accounts_parallel(accounts):
-    """Check all accounts in parallel"""
-    tasks = [check_account_status(acc) for acc in accounts]
-    return await asyncio.gather(*tasks)
 
 def filter_banned_accounts():
     """Filter and remove banned accounts"""
