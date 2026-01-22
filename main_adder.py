@@ -175,32 +175,55 @@ def main():
     print(f'{plus}{LG} Enter the exact username of the public group{W}[Without @]')
     g = input(f'{INPUT}{LG} Username [Eg: Techmedies_Hub]: {R}')
     group = f't.me/{g}'
+
+    # Resolve target group entity once
+    target_group_entity = None
+    if accounts:
+        first_account = accounts[0]
+        api_id = int(first_account[0])
+        api_hash = str(first_account[1])
+        phone = str(first_account[2])
+
+        client = TelegramClient(f'{config.SESSIONS_DIR}/{phone}', api_id, api_hash)
+        try:
+            print(f'\n{info}{LG} Resolving target group...{utils.RS}')
+            client.connect()
+            target_group_entity = client.get_entity(group)
+            print(f'{success}{LG} Group resolved: {target_group_entity.title}{utils.RS}')
+        except Exception as e:
+            print(f'{error}{R} Failed to resolve group: {e}{utils.RS}')
+            sys.exit(1)
+        finally:
+            client.disconnect()
+
+    if not target_group_entity:
+        print(f'{error}{R} Could not resolve target group entity. Exiting.{utils.RS}')
+        sys.exit(1)
     
     # Join target group from all accounts
     print(f'\n{info}{LG} Joining from all accounts...{utils.RS}')
 
-    async def join_channel(account, group):
+    async def join_channel(account, group_entity):
         api_id = int(account[0])
         api_hash = str(account[1])
         phone = str(account[2])
         client = AsyncTelegramClient(f'{config.SESSIONS_DIR}/{phone}', api_id, api_hash)
         try:
             await client.connect()
-            username = await client.get_entity(group)
-            await client(JoinChannelRequest(username))
+            await client(JoinChannelRequest(group_entity))
             print(f'{success}{LG} Joined from {phone}')
         except Exception as e:
             print(f'{error}{R} Error in joining from {phone}: {e}')
         finally:
             await client.disconnect()
 
-    async def join_all_accounts(accounts, group):
+    async def join_all_accounts(accounts, group_entity):
         tasks = []
         for account in accounts:
-            tasks.append(join_channel(account, group))
+            tasks.append(join_channel(account, group_entity))
         await asyncio.gather(*tasks)
 
-    asyncio.run(join_all_accounts(accounts, group))
+    asyncio.run(join_all_accounts(accounts, target_group_entity))
     
     time.sleep(1)
     utils.clear_screen()
@@ -289,18 +312,21 @@ def main():
             api_hash = str(acc[1])
             phone = str(acc[2])
             file = f'{config.MEMBERS_DIR}/members{i}.csv'
-            print(f'  python adder.py {api_id} {api_hash} {phone} {file} {group}')
-        
+            group_id = target_group_entity.id
+            group_hash = target_group_entity.access_hash
+            group_title = target_group_entity.title
+            print(f'  python adder.py {api_id} {api_hash} {phone} {file} {group_id} {group_hash} "{group_title}"')
+
         input(f'\n{plus}{LG} Press enter to exit...{utils.RS}')
         sys.exit(0)
-    
+
     # Windows - automated launching
     program = 'adder.py'
     o = str(len(to_use))
-    
+
     print(f'\n{info}{R} This will be fully automated.')
     input(f'\n{plus}{LG} Press enter to continue...{utils.RS}')
-    
+
     print(f'\n{info}{LG} Launching from {o} accounts...{utils.RS}\n')
     
     for i, account in enumerate(to_use):

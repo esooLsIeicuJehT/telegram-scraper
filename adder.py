@@ -55,22 +55,24 @@ def update_list(lst, temp_lst):
 def add_members():
     """Main function to add members to group"""
     # Check arguments
-    if len(sys.argv) < 6:
-        print(f"{error}{R} Usage: python adder.py <api_id> <api_hash> <phone> <csv_file> <group>{RS}")
-        print(f"{info}{G} Or run main_adder.py for automated multi-account adding{RS}")
+    if len(sys.argv) < 8:
+        print(f"{error}{R} Usage: python adder.py <api_id> <api_hash> <phone> <csv_file> <group_id> <group_hash> \"<group_title>\"{RS}")
+        print(f"{info}{G} This script is intended to be called from main_adder.py{RS}")
         sys.exit(1)
-    
+
     utils.clear_screen()
     utils.banner()
-    
+
     # Parse arguments
     try:
         api_id = int(sys.argv[1])
         api_hash = str(sys.argv[2])
         phone = str(sys.argv[3])
         file = str(sys.argv[4])
-        group = str(sys.argv[5])
-    except ValueError:
+        group_id = int(sys.argv[5])
+        group_hash = int(sys.argv[6])
+        group_name = str(sys.argv[7])
+    except (ValueError, IndexError):
         print(f"{error}{R} Invalid arguments provided.{RS}")
         sys.exit(1)
     
@@ -113,14 +115,8 @@ def add_members():
 
         time.sleep(1.5)
         
-        # Get target group
-        try:
-            target_group = client.get_entity(group)
-            entity = InputPeerChannel(target_group.id, target_group.access_hash)
-            group_name = target_group.title
-        except Exception as e:
-            print(f'{error}{R} Could not get target group: {e}{RS}')
-            sys.exit(1)
+        # Construct entity from args
+        entity = InputPeerChannel(group_id, group_hash)
         
         print(f'{info}{G} Adding members to {group_name}{RS}\n')
         print(f'{info}{G} Total users to add: {len(users)}{RS}\n')
