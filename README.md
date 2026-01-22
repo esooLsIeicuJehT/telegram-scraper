@@ -1,6 +1,6 @@
 # Telegram Scraper and Member Adder
 
-An enhanced Python tool for scraping Telegram group members and adding them to other groups using multiple accounts. Based on [DenizShabani/telegramscraper](https://github.com/DenizShabani/telegramscraper) with improvements and bug fixes.
+An enhanced Python tool for scraping Telegram group members and adding them to other groups using multiple accounts. Features multi-account support, advanced filtering, and ban prevention mechanisms. Based on [DenizShabani/telegramscraper](https://github.com/DenizShabani/telegramscraper) with improvements and bug fixes.
 
 ## Features
 
