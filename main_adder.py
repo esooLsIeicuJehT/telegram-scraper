@@ -8,6 +8,7 @@ import os
 import sys
 import random
 import asyncio
+import concurrent.futures
 import config
 import utils
 from telethon.sync import TelegramClient
@@ -287,7 +288,7 @@ def main():
             api_hash = str(acc[1])
             phone = str(acc[2])
             file = f'{config.MEMBERS_DIR}/members{i}.csv'
-            print(f'  python adder.py {api_id} {api_hash} {phone} {file} {group} {scraped_grp}')
+            print(f'  python adder.py {api_id} {api_hash} {phone} {file} {group}')
         
         input(f'\n{plus}{LG} Press enter to exit...{utils.RS}')
         sys.exit(0)
@@ -319,7 +320,7 @@ def main():
             time.sleep(1.5)
             
             # Write command
-            keyboard.write(f'python {program} {api_id} {api_hash} {phone} {file} {group} {scraped_grp}')
+            keyboard.write(f'python {program} {api_id} {api_hash} {phone} {file} {group}')
             keyboard.press_and_release('Enter')
             
             print(f'{plus}{LG} Launched from {phone}')
@@ -332,7 +333,7 @@ def main():
             api_hash = str(account[1])
             phone = str(account[2])
             file = f'{config.MEMBERS_DIR}/members{i}.csv'
-            print(f'  python adder.py {api_id} {api_hash} {phone} {file} {group} {scraped_grp}')
+            print(f'  python adder.py {api_id} {api_hash} {phone} {file} {group}')
         
         input(f'\n{plus}{LG} Press enter to exit...{utils.RS}')
 

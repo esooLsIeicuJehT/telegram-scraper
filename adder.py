@@ -56,7 +56,7 @@ def add_members():
     """Main function to add members to group"""
     # Check arguments
     if len(sys.argv) < 6:
-        print(f"{error}{R} Usage: python adder.py <api_id> <api_hash> <phone> <csv_file> <group> [scraped_group]{RS}")
+        print(f"{error}{R} Usage: python adder.py <api_id> <api_hash> <phone> <csv_file> <group>{RS}")
         print(f"{info}{G} Or run main_adder.py for automated multi-account adding{RS}")
         sys.exit(1)
     
