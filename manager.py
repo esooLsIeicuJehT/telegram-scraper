@@ -196,9 +196,11 @@ def filter_banned_accounts():
     if not banned_accs:
         print(f'{success} Congrats! No banned accounts')
     else:
-        for m in banned_accs:
-            if m in accounts:
-                accounts.remove(m)
+        # Rebuild list using set for O(1) lookups.
+        # Convert list items to tuples for set storage.
+        banned_set = {tuple(m) for m in banned_accs}
+        # Use slice assignment to modify the list in-place, preserving references
+        accounts[:] = [acc for acc in accounts if tuple(acc) not in banned_set]
         
         utils.save_accounts(accounts)
         print(f'{info} All banned accounts removed')
