@@ -53,6 +53,7 @@ async def check_all_accounts_parallel(accounts):
 def add_accounts():
     """Add new accounts"""
     accounts = utils.load_accounts()
+    existing_phones = {acc[2] for acc in accounts}
     
     newly_added = []
     while True:
@@ -64,15 +65,14 @@ def add_accounts():
 
             # Check if account already exists
             exists = False
-            for acc in accounts:
-                if acc[2] == p:
-                    print(f'{error} Account {p} already exists!')
-                    exists = True
-                    break
+            if p in existing_phones:
+                print(f'{error} Account {p} already exists!')
+                exists = True
 
             if not exists:
                 account = [a, b, p]
                 accounts.append(account)
+                existing_phones.add(p)
                 utils.save_accounts(accounts)
                 newly_added.append(account)
                 print(f'{success} Account saved!')
