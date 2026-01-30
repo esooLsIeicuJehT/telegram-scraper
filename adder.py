@@ -46,11 +46,31 @@ class Relog:
                     user['group_id']
                 ])
 
-def update_list(lst, temp_lst):
-    """Update list by removing processed items"""
-    count = len(temp_lst)
-    del lst[:count]
-    return lst
+def count_users_in_csv(file):
+    """Count valid users in CSV file without loading all into memory"""
+    count = 0
+    with open(file, 'r', encoding='UTF-8') as f:
+        rows = csv.reader(f, delimiter=',', lineterminator='\n')
+        next(rows, None)  # Skip header
+        for row in rows:
+            if len(row) < 5: continue
+            count += 1
+    return count
+
+def load_users_generator(file):
+    """Yield users from CSV file one by one"""
+    with open(file, 'r', encoding='UTF-8') as f:
+        rows = csv.reader(f, delimiter=',', lineterminator='\n')
+        next(rows, None)  # Skip header
+        for row in rows:
+            if len(row) < 5: continue
+            user = {}
+            user['username'] = row[0]
+            user['user_id'] = row[1]
+            user['access_hash'] = row[2]
+            user['group'] = row[3]
+            user['group_id'] = row[4]
+            yield user
 
 def add_members():
     """Main function to add members to group"""
@@ -81,26 +101,14 @@ def add_members():
         print(f"{error}{R} CSV file not found: {file}{RS}")
         sys.exit(1)
     
-    # Load users from CSV
-    users = []
+    # Count total users first
     try:
-        with open(file, 'r', encoding='UTF-8') as f:
-            rows = csv.reader(f, delimiter=',', lineterminator='\n')
-            next(rows, None)  # Skip header
-            for row in rows:
-                if len(row) < 5: continue
-                user = {}
-                user['username'] = row[0]
-                user['user_id'] = row[1]
-                user['access_hash'] = row[2]
-                user['group'] = row[3]
-                user['group_id'] = row[4]
-                users.append(user)
+        total_users = count_users_in_csv(file)
     except Exception as e:
         print(f"{error}{R} Error loading users: {e}{RS}")
         sys.exit(1)
     
-    if len(users) == 0:
+    if total_users == 0:
         print(f"{error}{R} No users found in CSV file{RS}")
         sys.exit(1)
     
@@ -119,16 +127,16 @@ def add_members():
         entity = InputPeerChannel(group_id, group_hash)
         
         print(f'{info}{G} Adding members to {group_name}{RS}\n')
-        print(f'{info}{G} Total users to add: {len(users)}{RS}\n')
+        print(f'{info}{G} Total users to add: {total_users}{RS}\n')
         
         n = 0
-        added_users = []
         success_count = 0
         failed_count = 0
         
+        users = load_users_generator(file)
+
         for user in users:
             n += 1
-            added_users.append(user)
             
             # Batch delay
             if n % config.ADD_BATCH_SIZE == 0:
@@ -148,7 +156,7 @@ def add_members():
                 client(InviteToChannelRequest(entity, [user_to_add]))
                 
                 usr_id = user['user_id']
-                print(f'{attempt}{G} Added {usr_id} ({n}/{len(users)}){RS}')
+                print(f'{attempt}{G} Added {usr_id} ({n}/{total_users}){RS}')
                 success_count += 1
                 
                 print(f'{sleep_msg}{G} Sleep {config.ADD_MEMBER_DELAY}s{RS}')
@@ -157,11 +165,12 @@ def add_members():
             except PeerFloodError:
                 print(f'\n{error}{R} Peer Flood Error - Account may be temporarily blocked{RS}')
                 print(f'{info}{G} Logging remaining users to file{RS}')
-                update_list(users, added_users)
-                if len(users) > 0:
-                    logger = Relog(users, file)
+                # Consume remaining users from generator
+                remaining_users = list(users)
+                if len(remaining_users) > 0:
+                    logger = Relog(remaining_users, file)
                     logger.start()
-                    print(f'{info}{G} Remaining {len(users)} users saved to {file}{RS}')
+                    print(f'{info}{G} Remaining {len(remaining_users)} users saved to {file}{RS}')
                 client.disconnect()
                 sys.exit(1)
                 
