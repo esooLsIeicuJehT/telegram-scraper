@@ -28,23 +28,24 @@ success = utils.success
 plus = utils.plus
 INPUT = utils.INPUT
 
-def verify_account(account):
+async def verify_account_async(account):
     """
-    Verifies a single account.
+    Verifies a single account asynchronously.
     Returns: (account, status, details)
     status: 'valid', 'needs_auth', 'error'
     """
     iD = int(account[0])
     Hash = str(account[1])
     phn = str(account[2])
-    client = TelegramClient(f'{config.SESSIONS_DIR}/{phn}', iD, Hash)
+    # Use AsyncTelegramClient for async operations
+    client = AsyncTelegramClient(f'{config.SESSIONS_DIR}/{phn}', iD, Hash)
 
     status = 'error'
     details = None
 
     try:
-        client.connect()
-        if client.is_user_authorized():
+        await client.connect()
+        if await client.is_user_authorized():
             status = 'valid'
         else:
             status = 'needs_auth'
@@ -52,9 +53,34 @@ def verify_account(account):
         status = 'error'
         details = str(e)
     finally:
-        client.disconnect()
+        await client.disconnect()
 
     return account, status, details
+
+async def process_verification(accounts):
+    valid_accounts = []
+    needs_auth_accounts = []
+
+    sem = asyncio.Semaphore(20)
+
+    async def sem_task(account):
+        async with sem:
+            return await verify_account_async(account)
+
+    tasks = [sem_task(a) for a in accounts]
+
+    for coro in asyncio.as_completed(tasks):
+        acc, status, details = await coro
+        phn = str(acc[2])
+
+        if status == 'valid':
+            valid_accounts.append(acc)
+        elif status == 'needs_auth':
+            needs_auth_accounts.append(acc)
+        elif status == 'error':
+            print(f'{error} Error connecting {phn}: {details}')
+
+    return valid_accounts, needs_auth_accounts
 
 def main():
     """Main orchestrator function"""
@@ -109,18 +135,7 @@ def main():
     needs_auth_accounts = []
 
     # Parallel verification
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-        futures = {executor.submit(verify_account, a): a for a in accounts}
-        for future in concurrent.futures.as_completed(futures):
-            acc, status, details = future.result()
-            phn = str(acc[2])
-
-            if status == 'valid':
-                valid_accounts.append(acc)
-            elif status == 'needs_auth':
-                needs_auth_accounts.append(acc)
-            elif status == 'error':
-                print(f'{error} Error connecting {phn}: {details}')
+    valid_accounts, needs_auth_accounts = asyncio.run(process_verification(accounts))
 
     # Process accounts needing authorization serially
     for a in needs_auth_accounts:
