@@ -157,7 +157,7 @@ def scrape_members():
     # Date calculations
     today = datetime.datetime.now()
     today_date = today.date()
-    yesterday = today - datetime.timedelta(days=1)
+    yesterday_date = today_date - datetime.timedelta(days=1)
 
     with open(f"{config.MEMBERS_DIR}/members.csv", "w", encoding='UTF-8') as f:
         writer = csv.writer(f, delimiter=",", lineterminator="\n")
@@ -186,9 +186,8 @@ def scrape_members():
                         d = getattr(member.status, 'was_online', None)
                         if d:
                              # Compare dates
-                             today_user = d.day == today.day and d.month == today.month and d.year == today.year
-                             yesterday_user = d.day == yesterday.day and d.month == yesterday.month and d.year == yesterday.year
-                             if today_user or yesterday_user:
+                             user_date = d.date()
+                             if user_date == today_date or user_date == yesterday_date:
                                  should_write = True
 
                 elif choice == 2: # Last week
