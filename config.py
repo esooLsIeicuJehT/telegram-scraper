@@ -10,6 +10,7 @@ SCRAPE_DELAY = 3
 # Batch settings
 MEMBERS_PER_ACCOUNT = 60
 ADD_BATCH_SIZE = 50
+API_BATCH_SIZE = 10
 
 # File paths
 SESSIONS_DIR = "sessions"
