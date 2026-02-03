@@ -135,6 +135,48 @@ def add_members():
         
         users = load_users_generator(file)
 
+        batch = []
+        batch_data = []
+
+        def process_batch(batch_peers, batch_users):
+            nonlocal success_count, failed_count
+            try:
+                client(InviteToChannelRequest(entity, batch_peers))
+                for idx, u_data in enumerate(batch_users):
+                    pos = n - len(batch_users) + idx + 1
+                    print(f'{attempt}{G} Added {u_data["user_id"]} ({pos}/{total_users}){RS}')
+                success_count += len(batch_peers)
+
+                print(f'{sleep_msg}{G} Sleep {config.ADD_MEMBER_DELAY}s{RS}')
+                time.sleep(config.ADD_MEMBER_DELAY)
+
+            except PeerFloodError:
+                raise
+
+            except UserPrivacyRestrictedError:
+                print(f'{error}{R} Batch failed due to Privacy Restriction. Switching to individual mode for this batch.{RS}')
+                for idx, u_peer in enumerate(batch_peers):
+                    try:
+                        client(InviteToChannelRequest(entity, [u_peer]))
+                        u_id = batch_users[idx]["user_id"]
+                        pos = n - len(batch_users) + idx + 1
+                        print(f'{attempt}{G} Added {u_id} ({pos}/{total_users}){RS}')
+                        success_count += 1
+                        print(f'{sleep_msg}{G} Sleep {config.ADD_MEMBER_DELAY}s{RS}')
+                        time.sleep(config.ADD_MEMBER_DELAY)
+                    except UserPrivacyRestrictedError:
+                        print(f'{error}{R} User Privacy Restriction - {batch_users[idx]["username"]}{RS}')
+                        failed_count += 1
+                    except PeerFloodError:
+                        raise
+                    except Exception as e:
+                        print(f'{error}{R} Error adding user: {e}{RS}')
+                        failed_count += 1
+
+            except Exception as e:
+                print(f'{error}{R} Error processing batch: {e}{RS}')
+                failed_count += len(batch_peers)
+
         for user in users:
             n += 1
             
@@ -143,30 +185,24 @@ def add_members():
                 print(f'{sleep_msg}{G} Sleep {config.BATCH_DELAY}s to prevent possible account ban{RS}')
                 time.sleep(config.BATCH_DELAY)
             
+            # Skip users without username
+            if user['username'] == "":
+                continue
+                
             try:
-                # Skip users without username
-                if user['username'] == "":
-                    # print(f'{info}{G} Skipped user {user["user_id"]} (no username){RS}')
-                    continue
-                
-                # Get user entity
                 user_to_add = InputPeerUser(int(user['user_id']), int(user['access_hash']))
+                batch.append(user_to_add)
+                batch_data.append(user)
                 
-                # Add to group
-                client(InviteToChannelRequest(entity, [user_to_add]))
-                
-                usr_id = user['user_id']
-                print(f'{attempt}{G} Added {usr_id} ({n}/{total_users}){RS}')
-                success_count += 1
-                
-                print(f'{sleep_msg}{G} Sleep {config.ADD_MEMBER_DELAY}s{RS}')
-                time.sleep(config.ADD_MEMBER_DELAY)
+                if len(batch) >= config.API_BATCH_SIZE:
+                    process_batch(batch, batch_data)
+                    batch = []
+                    batch_data = []
                 
             except PeerFloodError:
                 print(f'\n{error}{R} Peer Flood Error - Account may be temporarily blocked{RS}')
                 print(f'{info}{G} Logging remaining users to file{RS}')
-                # Consume remaining users from generator
-                remaining_users = list(users)
+                remaining_users = batch_data + list(users)
                 if len(remaining_users) > 0:
                     logger = Relog(remaining_users, file)
                     logger.start()
@@ -174,16 +210,27 @@ def add_members():
                 client.disconnect()
                 sys.exit(1)
                 
-            except UserPrivacyRestrictedError:
-                print(f'{error}{R} User Privacy Restriction - {user["username"]}{RS}')
-                failed_count += 1
-                continue
-                
             except Exception as e:
-                print(f'{error}{R} Error adding user: {e}{RS}')
-                failed_count += 1
+                print(f'{error}{R} Error in loop: {e}{RS}')
                 continue
         
+        # Process remaining batch
+        if batch:
+            try:
+                process_batch(batch, batch_data)
+            except PeerFloodError:
+                print(f'\n{error}{R} Peer Flood Error - Account may be temporarily blocked{RS}')
+                print(f'{info}{G} Logging remaining users to file{RS}')
+                remaining_users = batch_data
+                if len(remaining_users) > 0:
+                    logger = Relog(remaining_users, file)
+                    logger.start()
+                    print(f'{info}{G} Remaining {len(remaining_users)} users saved to {file}{RS}')
+                client.disconnect()
+                sys.exit(1)
+            except Exception:
+                pass
+
         # Summary
         print(f'\n{utils.success}{G} Addition complete!{RS}')
         print(f'{info}{G} Successfully added: {success_count}{RS}')
