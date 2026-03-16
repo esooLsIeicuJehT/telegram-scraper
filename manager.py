@@ -25,7 +25,10 @@ async def check_account_status(account):
     api_id = int(account[0])
     api_hash = str(account[1])
     phone = str(account[2])
-    session_path = f'{config.SESSIONS_DIR}/{phone}'
+
+    # Sanitize phone to prevent path traversal
+    safe_phone = os.path.basename(phone)
+    session_path = f'{config.SESSIONS_DIR}/{safe_phone}'
 
     client = AsyncTelegramClient(session_path, api_id, api_hash)
 
@@ -62,6 +65,10 @@ def add_accounts():
             b = str(input(f'{LG}Enter API Hash: {R}'))
             c = str(input(f'{LG}Enter Phone Number (with country code): {R}'))
             p = ''.join(c.split())
+
+            if not utils.is_valid_phone(p):
+                print(f'{error} Invalid phone number! Please use digits and optional "+" only.')
+                continue
 
             # Check if account already exists
             exists = False
@@ -112,7 +119,8 @@ def add_accounts():
 
                 # Process unauthorized accounts sequentially
                 for added in unauthorized_accs:
-                    c = TelegramClient(f'{config.SESSIONS_DIR}/{added[2]}', added[0], added[1])
+                    safe_phone = os.path.basename(str(added[2]))
+                    c = TelegramClient(f'{config.SESSIONS_DIR}/{safe_phone}', added[0], added[1])
                     try:
                         c.start()
                         print(f'\n{success} Logged in - {added[2]}')
@@ -169,7 +177,10 @@ def filter_banned_accounts():
         api_id = int(account[0])
         api_hash = str(account[1])
         phone = str(account[2])
-        session_path = f'{config.SESSIONS_DIR}/{phone}'
+
+        # Sanitize phone to prevent path traversal
+        safe_phone = os.path.basename(phone)
+        session_path = f'{config.SESSIONS_DIR}/{safe_phone}'
 
         # Use sync client for interaction
         client = TelegramClient(session_path, api_id, api_hash)
@@ -245,7 +256,8 @@ def delete_account():
             return
         
         phone = str(accounts[index][2])
-        session_file = f'{config.SESSIONS_DIR}/{phone}.session'
+        safe_phone = os.path.basename(phone)
+        session_file = f'{config.SESSIONS_DIR}/{safe_phone}.session'
         
         # Remove session file if it exists
         if os.path.exists(session_file):

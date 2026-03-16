@@ -132,3 +132,13 @@ def save_accounts(accounts):
     os.makedirs(config.DATA_DIR, exist_ok=True)
     with open(json_file, 'w') as f:
         json.dump(accounts, f, indent=4)
+
+def is_valid_phone(phone):
+    """Check if the phone number is valid and contains no path traversal characters."""
+    if not phone:
+        return False
+    # Allow optional '+' at the start, then only digits
+    pattern = phone
+    if pattern.startswith('+'):
+        pattern = pattern[1:]
+    return pattern.isdigit()

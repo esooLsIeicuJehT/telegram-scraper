@@ -113,7 +113,9 @@ def add_members():
         sys.exit(1)
     
     # Create client
-    client = TelegramClient(f'{config.SESSIONS_DIR}/{phone}', api_id, api_hash)
+    # Sanitize phone to prevent path traversal
+    safe_phone = os.path.basename(phone)
+    client = TelegramClient(f'{config.SESSIONS_DIR}/{safe_phone}', api_id, api_hash)
     
     try:
         client.connect()

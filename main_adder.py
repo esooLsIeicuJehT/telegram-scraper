@@ -37,8 +37,10 @@ async def verify_account_async(account):
     iD = int(account[0])
     Hash = str(account[1])
     phn = str(account[2])
+    # Sanitize phone to prevent path traversal
+    safe_phone = os.path.basename(phn)
     # Use AsyncTelegramClient for async operations
-    client = AsyncTelegramClient(f'{config.SESSIONS_DIR}/{phn}', iD, Hash)
+    client = AsyncTelegramClient(f'{config.SESSIONS_DIR}/{safe_phone}', iD, Hash)
 
     status = 'error'
     details = None
@@ -142,7 +144,9 @@ def main():
         iD = int(a[0])
         Hash = str(a[1])
         phn = str(a[2])
-        clnt = TelegramClient(f'{config.SESSIONS_DIR}/{phn}', iD, Hash)
+        # Sanitize phone to prevent path traversal
+        safe_phone = os.path.basename(phn)
+        clnt = TelegramClient(f'{config.SESSIONS_DIR}/{safe_phone}', iD, Hash)
         
         try:
             clnt.connect()
@@ -199,7 +203,9 @@ def main():
         api_hash = str(first_account[1])
         phone = str(first_account[2])
 
-        client = TelegramClient(f'{config.SESSIONS_DIR}/{phone}', api_id, api_hash)
+        # Sanitize phone to prevent path traversal
+        safe_phone = os.path.basename(phone)
+        client = TelegramClient(f'{config.SESSIONS_DIR}/{safe_phone}', api_id, api_hash)
         try:
             print(f'\n{info}{LG} Resolving target group...{utils.RS}')
             client.connect()
@@ -222,7 +228,9 @@ def main():
         api_id = int(account[0])
         api_hash = str(account[1])
         phone = str(account[2])
-        client = AsyncTelegramClient(f'{config.SESSIONS_DIR}/{phone}', api_id, api_hash)
+        # Sanitize phone to prevent path traversal
+        safe_phone = os.path.basename(phone)
+        client = AsyncTelegramClient(f'{config.SESSIONS_DIR}/{safe_phone}', api_id, api_hash)
         try:
             await client.connect()
             await client(JoinChannelRequest(group_entity))
