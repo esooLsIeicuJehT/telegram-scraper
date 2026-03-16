@@ -48,14 +48,10 @@ class Relog:
 
 def count_users_in_csv(file):
     """Count valid users in CSV file without loading all into memory"""
-    count = 0
     with open(file, 'r', encoding='UTF-8') as f:
         rows = csv.reader(f, delimiter=',', lineterminator='\n')
         next(rows, None)  # Skip header
-        for row in rows:
-            if len(row) < 5: continue
-            count += 1
-    return count
+        return sum(1 for row in rows if len(row) >= 5)
 
 def load_users_generator(file):
     """Yield users from CSV file one by one"""
