@@ -6,9 +6,7 @@ import csv
 import time
 import os
 import sys
-import random
 import asyncio
-import concurrent.futures
 import subprocess
 import config
 import utils
